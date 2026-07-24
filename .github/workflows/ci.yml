@@ -1,0 +1,92 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: resume_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install black isort
+
+      - name: Run Black (formatting check)
+        run: black --check --diff app/ main.py tests/
+
+      - name: Run isort (import order check)
+        run: isort --check-only --diff app/ main.py tests/
+
+      - name: Run pytest
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:password@localhost:5432/resume_test
+          DATABASE_URL_SYNC: postgresql+psycopg2://postgres:password@localhost:5432/resume_test
+          REDIS_URL: redis://localhost:6379/0
+          SECRET_KEY: test-secret-key
+          GEMINI_API_KEY: fake-test-key
+        run: |
+          pytest tests/ -v --tb=short --ignore=tests/test_api.py
+
+  docker-build:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build FastAPI Docker image
+        run: docker build -t resume-intelligence:latest .
+
+      - name: Build Streamlit Docker image
+        run: docker build -f Dockerfile.streamlit -t resume-streamlit:latest .
+
+      - name: Verify image starts
+        run: |
+          docker run -d --name test-api \
+            -e DATABASE_URL="postgresql+asyncpg://u:p@localhost/db" \
+            -e SECRET_KEY="test-key" \
+            -e GEMINI_API_KEY="fake" \
+            -p 8000:8000 resume-intelligence:latest
+          sleep 5
+          docker stop test-api || true

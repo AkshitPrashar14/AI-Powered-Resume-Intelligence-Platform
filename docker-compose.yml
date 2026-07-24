@@ -1,0 +1,132 @@
+# ============================================================
+# docker-compose.yml
+# AI-Powered Resume Intelligence Platform
+#
+# Services:
+#   fastapi    — Backend API (port 8000)
+#   streamlit  — Frontend UI (port 8501)
+#   postgres   — PostgreSQL database (port 5432)
+#   redis      — Redis cache for embeddings (port 6379)
+#
+# Usage:
+#   docker compose up --build
+#   docker compose down
+# ============================================================
+
+version: "3.9"
+
+services:
+  # ── PostgreSQL ─────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: resume_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-resume_intelligence}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - resume_network
+
+  # ── Redis ───────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: resume_redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - resume_network
+
+  # ── FastAPI Backend ─────────────────────────────────────────
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: resume_fastapi
+    restart: unless-stopped
+    environment:
+      # Database
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-resume_intelligence}
+      DATABASE_URL_SYNC: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-resume_intelligence}
+      # Redis
+      REDIS_URL: redis://redis:6379/0
+      # Gemini
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash}
+      # Auth
+      SECRET_KEY: ${SECRET_KEY:-change-this-secret-key-in-production}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      # App
+      DEBUG: ${DEBUG:-false}
+      EMBEDDING_MODEL: all-MiniLM-L6-v2
+      EMBEDDING_CACHE_DIR: /app/cache/embeddings
+      FAISS_INDEX_DIR: /app/cache/faiss
+      UPLOAD_DIR: /app/uploads
+      ALLOWED_ORIGINS: http://localhost:8501,http://streamlit:8501
+    volumes:
+      - upload_data:/app/uploads
+      - cache_data:/app/cache
+      - logs_data:/app/logs
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
+    networks:
+      - resume_network
+
+  # ── Streamlit Frontend ──────────────────────────────────────
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    container_name: resume_streamlit
+    restart: unless-stopped
+    environment:
+      API_BASE_URL: http://fastapi:8000/api/v1
+    ports:
+      - "8501:8501"
+    depends_on:
+      fastapi:
+        condition: service_healthy
+    networks:
+      - resume_network
+
+# ── Volumes ─────────────────────────────────────────────────
+volumes:
+  postgres_data:
+  redis_data:
+  upload_data:
+  cache_data:
+  logs_data:
+
+# ── Networks ─────────────────────────────────────────────────
+networks:
+  resume_network:
+    driver: bridge
