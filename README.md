@@ -274,11 +274,9 @@ Full interactive docs at `http://localhost:8000/docs`
 
 ## Future Improvements
 
-- [ ] JWT authentication + multi-user support
 - [ ] Multiple resume comparison
 - [ ] Recruiter dashboard with aggregate analytics
-- [ ] PDF report generation (reportlab)
 - [ ] Resume ranking against multiple JDs
-- [ ] Background job queue (Celery/Redis) for async analysis
-- [ ] Persistent shared FAISS index across sessions
+- [ ] Background job queue (Celery/RabbitMQ) for heavy async analysis
+- [ ] Persistent shared FAISS index across distributed workers
 - [ ] Resume versioning + diff view
