@@ -28,7 +28,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
@@ -80,7 +80,7 @@ services:
       EMBEDDING_CACHE_DIR: /app/cache/embeddings
       FAISS_INDEX_DIR: /app/cache/faiss
       UPLOAD_DIR: /app/uploads
-      ALLOWED_ORIGINS: http://localhost:8501,http://streamlit:8501
+      ALLOWED_ORIGINS: '["http://localhost:8501", "http://streamlit:8501"]'
     volumes:
       - upload_data:/app/uploads
       - cache_data:/app/cache
