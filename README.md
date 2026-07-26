@@ -180,16 +180,14 @@ All tables use **UUID primary keys**, **timestamped columns**, and **PostgreSQL 
 ## Installation & Setup
 
 ### Prerequisites
-- Python 3.10+
-- PostgreSQL 14+
+- Docker and Docker Compose
 - Google Gemini API key
 
-### 1. Clone & install dependencies
+### 1. Clone the repository
 
 ```bash
 git clone <repo-url>
 cd resume-intelligence-platform
-pip install -r requirements.txt
 ```
 
 ### 2. Configure environment
@@ -198,41 +196,26 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env and set:
 #   GEMINI_API_KEY=your_key_here
-#   DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5432/resume_intelligence
-#   DATABASE_URL_SYNC=postgresql+psycopg2://user:pass@localhost:5432/resume_intelligence
 ```
 
-### 3. Create PostgreSQL database
+### 3. Run with Docker Compose
+
+The entire stack (PostgreSQL, Redis, FastAPI, Streamlit) runs automatically via Docker Compose. Database migrations are applied on startup.
 
 ```bash
-psql -U postgres -c "CREATE DATABASE resume_intelligence;"
+docker compose up -d --build
 ```
 
-### 4. Run Alembic migrations
+### 4. Access the Platform
+
+- **Frontend (Streamlit)**: http://localhost:8501
+- **Backend API Docs (Swagger)**: http://localhost:8000/docs
+- **Logs**: `docker compose logs -f`
+
+### 5. Stopping the Platform
 
 ```bash
-alembic revision --autogenerate -m "initial schema"
-alembic upgrade head
-```
-
-### 5. Start the backend
-
-```bash
-uvicorn main:app --reload --port 8000
-# Docs: http://localhost:8000/docs
-```
-
-### 6. Start the frontend
-
-```bash
-streamlit run frontend/app.py
-# Opens: http://localhost:8501
-```
-
-### 7. Run tests
-
-```bash
-pytest tests/ -v
+docker compose down
 ```
 
 ---
