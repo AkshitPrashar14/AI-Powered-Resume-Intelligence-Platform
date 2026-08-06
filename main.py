@@ -26,7 +26,6 @@ from app.api.routers import (
     improve_router,
     match_router,
     upload_router,
-    auth_router,
 )
 from app.api.routers import jd_router, reports_router
 from app.config import settings
@@ -138,7 +137,6 @@ A production-grade platform that uses **Google Gemini**, **Sentence Transformers
         """,
         openapi_tags=[
             {"name": "health", "description": "Health check endpoints"},
-            {"name": "auth", "description": "Authentication — register, login, me, logout"},
             {"name": "upload", "description": "Resume and job description upload"},
             {"name": "analyze", "description": "Full AI analysis pipeline (orchestrated)"},
             {"name": "ats", "description": "Standalone rule-based ATS scoring"},
@@ -177,9 +175,6 @@ A production-grade platform that uses **Google Gemini**, **Sentence Transformers
 
     # ── Register Routers ──────────────────────────────────────
     api_prefix = "/api/v1"
-
-    # Auth (prefix included in router itself)
-    application.include_router(auth_router.router, prefix=api_prefix)
 
     # Core endpoints
     application.include_router(health_router.router, prefix=api_prefix, tags=["health"])

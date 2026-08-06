@@ -13,7 +13,7 @@
 #   docker compose down
 # ============================================================
 
-version: "3.9"
+
 
 services:
   # ── PostgreSQL ─────────────────────────────────────────────
@@ -70,7 +70,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       # Gemini
       GEMINI_API_KEY: ${GEMINI_API_KEY}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-1.5-flash}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash-lite}
       # Auth
       SECRET_KEY: ${SECRET_KEY:-change-this-secret-key-in-production}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-60}
@@ -80,11 +80,12 @@ services:
       EMBEDDING_CACHE_DIR: /app/cache/embeddings
       FAISS_INDEX_DIR: /app/cache/faiss
       UPLOAD_DIR: /app/uploads
-      ALLOWED_ORIGINS: '["http://localhost:8501", "http://streamlit:8501"]'
+      ALLOWED_ORIGINS: '["http://localhost:3001", "http://react:80"]'
     volumes:
       - upload_data:/app/uploads
       - cache_data:/app/cache
       - logs_data:/app/logs
+      - ./alembic/versions:/app/alembic/versions
     ports:
       - "8000:8000"
     depends_on:
@@ -101,20 +102,15 @@ services:
     networks:
       - resume_network
 
-  # ── Streamlit Frontend ──────────────────────────────────────
-  streamlit:
+  # ── React Frontend ──────────────────────────────────────────
+  react:
     build:
       context: .
-      dockerfile: Dockerfile.streamlit
-    container_name: resume_streamlit
+      dockerfile: Dockerfile.react
+    container_name: resume_react
     restart: unless-stopped
-    environment:
-      API_BASE_URL: http://fastapi:8000/api/v1
     ports:
-      - "8501:8501"
-    depends_on:
-      fastapi:
-        condition: service_healthy
+      - "3001:80"
     networks:
       - resume_network
 

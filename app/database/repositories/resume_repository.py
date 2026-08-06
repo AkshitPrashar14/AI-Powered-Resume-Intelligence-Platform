@@ -13,10 +13,10 @@ class ResumeRepository(BaseRepository[Resume]):
     def __init__(self, db: AsyncSession) -> None:
         super().__init__(Resume, db)
 
-    async def get_by_user(self, user_id: uuid.UUID, limit: int = 50) -> List[Resume]:
+    async def get_all(self, limit: int = 50) -> List[Resume]:
         result = await self.db.execute(
             select(Resume)
-            .where(Resume.user_id == user_id, Resume.is_deleted == False)  # noqa
+            .where(Resume.is_deleted == False)  # noqa
             .order_by(Resume.created_at.desc())
             .limit(limit)
         )

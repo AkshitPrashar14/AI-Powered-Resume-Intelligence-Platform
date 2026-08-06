@@ -18,9 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.repositories.analysis_repository import AnalysisRepository
 from app.database.repositories.resume_repository import ResumeRepository
 from app.database.session import get_db
-from app.models.user import User
 from app.schemas.schemas import HistoryItem
-from app.services.auth_service import get_current_active_user
 from app.services.report_service import ReportService
 
 router = APIRouter(tags=["history"])
@@ -34,14 +32,13 @@ router = APIRouter(tags=["history"])
 )
 async def get_all_history(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ):
     """Return all past analyses for the authenticated user."""
     resume_repo = ResumeRepository(db)
     analysis_repo = AnalysisRepository(db)
 
-    # Get all resumes belonging to this user
-    user_resumes = await resume_repo.get_by_user(current_user.id)
+    # Get all resumes since platform is open access
+    user_resumes = await resume_repo.get_all()
     if not user_resumes:
         return []
 
@@ -87,12 +84,11 @@ async def get_all_history(
 async def get_history(
     resume_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ):
     """Return all past analyses for a specific resume."""
     resume_repo = ResumeRepository(db)
     resume = await resume_repo.get_active(resume_id)
-    if not resume or resume.user_id != current_user.id:
+    if not resume:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
 
     analysis_repo = AnalysisRepository(db)
@@ -140,12 +136,11 @@ async def get_history(
 async def get_pdf_report(
     resume_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ):
     """Generate and return a PDF report for the latest analysis."""
     resume_repo = ResumeRepository(db)
     resume = await resume_repo.get_active(resume_id)
-    if not resume or resume.user_id != current_user.id:
+    if not resume:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resume not found")
 
     analysis_repo = AnalysisRepository(db)

@@ -94,7 +94,6 @@ class AIOrchestrator:
         self,
         resume_id: uuid.UUID,
         job_description_text: str,
-        user_id: uuid.UUID,
         job_title: str = "",
         company: str = "",
     ) -> FullAnalysisResult:
@@ -120,7 +119,6 @@ class AIOrchestrator:
         Args:
             resume_id: UUID of the uploaded resume.
             job_description_text: Raw JD text.
-            user_id: Authenticated user's UUID.
             job_title: Optional job title for context.
             company: Optional company name.
 
@@ -130,12 +128,12 @@ class AIOrchestrator:
         pipeline_start = time.perf_counter()
         logger.info(
             f"[ORCHESTRATOR] Starting full analysis — "
-            f"resume={resume_id}, user={user_id}"
+            f"resume={resume_id}"
         )
 
         # ── Step 1: Load resume ───────────────────────────────────────────────
         resume = await self._resume_repo.get_active(resume_id)
-        if not resume or resume.user_id != user_id:
+        if not resume:
             raise ValueError(f"Resume {resume_id} not found or not owned by user")
 
         resume_text = resume.parsed_text or ""
@@ -146,7 +144,6 @@ class AIOrchestrator:
 
         # ── Step 2: Create/Link JobDescription record ─────────────────────────
         jd_record = await self._jd_repo.create(
-            user_id=user_id,
             title=job_title or "Untitled Position",
             company=company or None,
             description=job_description_text,
@@ -200,7 +197,11 @@ class AIOrchestrator:
             # ── Step 6: RAG full analysis ──────────────────────────────────────
             logger.info("[ORCHESTRATOR] Starting RAG pipeline...")
             rag = RAGPipeline()
-            rag_data = await rag.run_full_analysis(resume_text, job_description_text)
+            try:
+                rag_data = await rag.run_full_analysis(resume_text, job_description_text)
+            except Exception as e:
+                logger.error(f"[ORCHESTRATOR] RAG pipeline failed: {e}")
+                rag_data = {}
 
             strengths = rag_data.get("strengths", [])
             weaknesses = rag_data.get("weaknesses", [])
@@ -300,11 +301,11 @@ class AIOrchestrator:
             raise
 
     async def run_ats_only(
-        self, resume_id: uuid.UUID, job_description: str, user_id: uuid.UUID
+        self, resume_id: uuid.UUID, job_description: str
     ):
         """Run only the ATS scoring pipeline."""
         resume = await self._resume_repo.get_active(resume_id)
-        if not resume or resume.user_id != user_id:
+        if not resume:
             raise ValueError(f"Resume {resume_id} not found")
         return await self._ats.calculate_score(resume.parsed_text or "", job_description)
 
@@ -312,32 +313,31 @@ class AIOrchestrator:
         self,
         resume_id: uuid.UUID,
         job_description: str,
-        user_id: uuid.UUID,
         resume_skills=None,
     ):
         """Run only the semantic matching pipeline."""
         resume = await self._resume_repo.get_active(resume_id)
-        if not resume or resume.user_id != user_id:
+        if not resume:
             raise ValueError(f"Resume {resume_id} not found")
         return await self._match.compute_match(
             resume.parsed_text or "", job_description, resume_skills or []
         )
 
     async def run_improve_only(
-        self, resume_id: uuid.UUID, job_description: str, user_id: uuid.UUID
+        self, resume_id: uuid.UUID, job_description: str
     ):
         """Run only the resume improvement pipeline."""
         resume = await self._resume_repo.get_active(resume_id)
-        if not resume or resume.user_id != user_id:
+        if not resume:
             raise ValueError(f"Resume {resume_id} not found")
         parsed = self._parser._extract_fields(resume.parsed_text or "")
         return await self._improve.improve_resume(parsed.experience, job_description)
 
     async def run_feedback_only(
-        self, resume_id: uuid.UUID, job_description: str, user_id: uuid.UUID
+        self, resume_id: uuid.UUID, job_description: str
     ):
         """Run only the section feedback pipeline."""
         resume = await self._resume_repo.get_active(resume_id)
-        if not resume or resume.user_id != user_id:
+        if not resume:
             raise ValueError(f"Resume {resume_id} not found")
         return await self._feedback.get_feedback(resume.parsed_text or "", job_description)

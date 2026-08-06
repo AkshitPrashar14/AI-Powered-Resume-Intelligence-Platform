@@ -31,14 +31,6 @@ class JobDescription(Base):
         default=uuid.uuid4,
     )
 
-    # ── Foreign Key → Users ───────────────────────────────────
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        comment="User who created this job description",
-    )
-
     # ── Job Details ───────────────────────────────────────────
     title: Mapped[str] = mapped_column(
         String(255),
@@ -79,12 +71,7 @@ class JobDescription(Base):
         nullable=False,
     )
 
-    # ── Relationships ─────────────────────────────────────────
-    user: Mapped["User"] = relationship(  # noqa: F821
-        "User",
-        back_populates="job_descriptions",
-        lazy="select",
-    )
+
     analyses: Mapped[list["AnalysisHistory"]] = relationship(  # noqa: F821
         "AnalysisHistory",
         back_populates="job_description",
@@ -94,7 +81,6 @@ class JobDescription(Base):
 
     # ── Indexes ───────────────────────────────────────────────
     __table_args__ = (
-        Index("ix_jd_user_id", "user_id"),
         Index("ix_jd_created_at", "created_at"),
         Index("ix_jd_title", "title"),
         {"comment": "Job descriptions submitted by users"},

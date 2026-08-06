@@ -1,6 +1,5 @@
 """
-ORM Models Package
-==================
+App Models Package.
 Imports all models so Alembic's autogenerate can detect them.
 """
 
@@ -9,10 +8,8 @@ from app.models.embedding import ResumeEmbedding
 from app.models.job_description import JobDescription
 from app.models.report import Report
 from app.models.resume import Resume
-from app.models.user import User
 
 __all__ = [
-    "User",
     "Resume",
     "JobDescription",
     "AnalysisHistory",

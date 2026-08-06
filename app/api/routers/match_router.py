@@ -7,8 +7,6 @@ from pydantic import BaseModel
 from app.ai.orchestrator import AIOrchestrator
 from app.database.session import get_db
 from app.schemas.schemas import MatchResult
-from app.models.user import User
-from app.services.auth_service import get_current_active_user
 
 router = APIRouter()
 
@@ -28,7 +26,6 @@ class MatchRequest(BaseModel):
 async def match_resume(
     request: MatchRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ):
     """Compute semantic similarity and skill overlap between resume and JD."""
     orchestrator = AIOrchestrator(db)
@@ -36,7 +33,6 @@ async def match_resume(
         return await orchestrator.run_match_only(
             request.resume_id,
             request.job_description,
-            current_user.id,
             request.resume_skills,
         )
     except ValueError as e:

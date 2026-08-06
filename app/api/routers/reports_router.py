@@ -17,8 +17,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.repositories.analysis_repository import AnalysisRepository
 from app.database.repositories.resume_repository import ResumeRepository
 from app.database.session import get_db
-from app.models.user import User
-from app.services.auth_service import get_current_active_user
 from app.services.report_service import ReportService
 
 router = APIRouter(tags=["reports"])
@@ -33,7 +31,6 @@ router = APIRouter(tags=["reports"])
 async def get_report(
     analysis_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ):
     """Return the full JSON report for a completed analysis."""
     # Verify ownership via analysis → resume → user
@@ -44,7 +41,7 @@ async def get_report(
 
     resume_repo = ResumeRepository(db)
     resume = await resume_repo.get_active(analysis.resume_id)
-    if not resume or resume.user_id != current_user.id:
+    if not resume:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     report_service = ReportService(db)
@@ -73,7 +70,6 @@ async def get_report(
 async def download_pdf_report(
     analysis_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ):
     """Generate and return a PDF report for downloading."""
     # Verify ownership
@@ -84,7 +80,7 @@ async def download_pdf_report(
 
     resume_repo = ResumeRepository(db)
     resume = await resume_repo.get_active(analysis.resume_id)
-    if not resume or resume.user_id != current_user.id:
+    if not resume:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     report_service = ReportService(db)

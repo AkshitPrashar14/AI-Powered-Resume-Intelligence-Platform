@@ -25,8 +25,8 @@
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Streamlit Frontend                   │
-│            frontend/app.py (port 8501)                  │
+│                    React SPA Frontend                   │
+│            frontend/ (Vite, Nginx, port 3001)           │
 └────────────────────┬────────────────────────────────────┘
                      │ HTTP REST
 ┌────────────────────▼────────────────────────────────────┐
@@ -153,7 +153,11 @@ resume-intelligence-platform/
 │   └── versions/                    # Migration scripts go here
 │
 ├── frontend/
-│   └── app.py                       # Streamlit UI
+│   ├── src/                         # React Components & Pages
+│   │   ├── pages/                   # Dashboard, Analyze, Settings, etc.
+│   │   └── api.js                   # Axios HTTP Client
+│   ├── package.json
+│   └── vite.config.js               # Vite bundler config
 │
 └── tests/
     ├── conftest.py
@@ -165,15 +169,13 @@ resume-intelligence-platform/
 ## Database Schema
 
 ```sql
-users              → resumes (1:N, CASCADE)
-users              → job_descriptions (1:N, CASCADE)
 resumes            → analysis_history (1:N, CASCADE)
 resumes            → resume_embeddings (1:N, CASCADE)
 job_descriptions   → analysis_history (1:N, CASCADE)
 analysis_history   → reports (1:1, CASCADE, UNIQUE)
 ```
 
-All tables use **UUID primary keys**, **timestamped columns**, and **PostgreSQL indexes** on all foreign keys and frequently queried fields.
+All tables use **UUID primary keys**, **timestamped columns**, and **PostgreSQL indexes** on frequently queried fields.
 
 ---
 
@@ -208,7 +210,7 @@ docker compose up -d --build
 
 ### 4. Access the Platform
 
-- **Frontend (Streamlit)**: http://localhost:8501
+- **Frontend (React Dashboard)**: http://localhost:3001
 - **Backend API Docs (Swagger)**: http://localhost:8000/docs
 - **Logs**: `docker compose logs -f`
 
@@ -248,7 +250,8 @@ Full interactive docs at `http://localhost:8000/docs`
 | **RAG** | Custom pipeline: chunk → embed → retrieve → generate |
 | **Database** | PostgreSQL + SQLAlchemy 2.0 (async) + Alembic |
 | **Validation** | Pydantic v2 |
-| **Frontend** | Streamlit |
+| **Frontend** | React + Vite + Axios |
+| **Styling** | Vanilla CSS (Dark/Light themes) |
 | **Parsing** | pdfplumber, PyMuPDF, python-docx |
 | **Logging** | Loguru |
 | **Testing** | pytest + pytest-asyncio |

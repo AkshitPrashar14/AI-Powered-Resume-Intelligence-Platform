@@ -97,7 +97,7 @@ class UploadResumeResponse(BaseModel):
 class JobDescriptionCreate(BaseModel):
     title: str = Field(..., min_length=2, max_length=255)
     company: Optional[str] = Field(None, max_length=255)
-    description: str = Field(..., min_length=50)
+    description: str = Field(..., min_length=5)
 
 
 class JobDescriptionResponse(BaseModel):
@@ -114,7 +114,7 @@ class JobDescriptionResponse(BaseModel):
 # ─────────────────────────────────────────────
 class AnalyzeRequest(BaseModel):
     resume_id: uuid.UUID
-    job_description: str = Field(..., min_length=50, description="Raw JD text")
+    job_description: str = Field(..., min_length=5, description="Raw JD text")
     job_title: Optional[str] = None
     company: Optional[str] = None
 

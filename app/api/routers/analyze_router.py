@@ -11,8 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.orchestrator import AIOrchestrator
 from app.database.session import get_db
 from app.schemas.schemas import AnalyzeRequest, FullAnalysisResult
-from app.models.user import User
-from app.services.auth_service import get_current_active_user
 
 router = APIRouter()
 
@@ -31,7 +29,6 @@ router = APIRouter()
 async def analyze_resume(
     request: AnalyzeRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ):
     """
     Full analysis endpoint via AIOrchestrator.
@@ -52,7 +49,6 @@ async def analyze_resume(
         result = await orchestrator.run_full_analysis(
             resume_id=request.resume_id,
             job_description_text=request.job_description,
-            user_id=current_user.id,
             job_title=request.job_title or "",
             company=request.company or "",
         )

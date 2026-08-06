@@ -6,8 +6,6 @@ from pydantic import BaseModel
 from app.ai.orchestrator import AIOrchestrator
 from app.database.session import get_db
 from app.schemas.schemas import ImproveResult
-from app.models.user import User
-from app.services.auth_service import get_current_active_user
 
 router = APIRouter()
 
@@ -26,13 +24,12 @@ class ImproveRequest(BaseModel):
 async def improve_resume(
     request: ImproveRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ):
     """Rewrite resume bullets into STAR format with quantified achievements."""
     orchestrator = AIOrchestrator(db)
     try:
         return await orchestrator.run_improve_only(
-            request.resume_id, request.job_description, current_user.id
+            request.resume_id, request.job_description
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

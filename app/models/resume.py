@@ -32,14 +32,6 @@ class Resume(Base):
         default=uuid.uuid4,
     )
 
-    # ── Foreign Key → Users ───────────────────────────────────
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
-        nullable=False,
-        comment="Owner user of this resume",
-    )
-
     # ── File Metadata ─────────────────────────────────────────
     original_filename: Mapped[str] = mapped_column(
         String(255),
@@ -99,12 +91,7 @@ class Resume(Base):
         comment="Soft delete flag — do not purge rows",
     )
 
-    # ── Relationships ─────────────────────────────────────────
-    user: Mapped["User"] = relationship(  # noqa: F821
-        "User",
-        back_populates="resumes",
-        lazy="select",
-    )
+
     analyses: Mapped[list["AnalysisHistory"]] = relationship(  # noqa: F821
         "AnalysisHistory",
         back_populates="resume",
@@ -120,7 +107,6 @@ class Resume(Base):
 
     # ── Indexes ───────────────────────────────────────────────
     __table_args__ = (
-        Index("ix_resumes_user_id", "user_id"),
         Index("ix_resumes_created_at", "created_at"),
         Index("ix_resumes_candidate_email", "candidate_email"),
         {"comment": "Uploaded resume documents with parsed content"},

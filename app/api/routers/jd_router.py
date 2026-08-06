@@ -16,9 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.repositories.jd_repository import JobDescriptionRepository
 from app.database.session import get_db
-from app.models.user import User
 from app.schemas.schemas import JobDescriptionCreate, JobDescriptionResponse
-from app.services.auth_service import get_current_active_user
 
 router = APIRouter(tags=["upload"])
 
@@ -33,7 +31,6 @@ router = APIRouter(tags=["upload"])
 async def upload_job_description(
     jd_in: JobDescriptionCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ):
     """
     Create and persist a job description record.
@@ -44,14 +41,13 @@ async def upload_job_description(
     jd_repo = JobDescriptionRepository(db)
     try:
         jd = await jd_repo.create(
-            user_id=current_user.id,
             title=jd_in.title,
             company=jd_in.company,
             description=jd_in.description,
         )
         logger.info(
             f"[JD] Created job description '{jd_in.title}' "
-            f"for user {current_user.id} — id={jd.id}"
+            f"— id={jd.id}"
         )
         return jd
     except Exception as e:
@@ -70,9 +66,8 @@ async def upload_job_description(
 )
 async def list_job_descriptions(
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ):
     """Return all job descriptions for the authenticated user."""
     jd_repo = JobDescriptionRepository(db)
-    jds = await jd_repo.get_by_user(current_user.id)
+    jds = await jd_repo.get_by_user()
     return jds

@@ -6,18 +6,18 @@ Handles resume file uploads (PDF, DOCX, TXT).
 
 import uuid
 
+from typing import List
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
-from app.schemas.schemas import UploadResumeResponse
+from app.schemas.schemas import UploadResumeResponse, ResumeResponse
 from app.services.resume_service import ResumeService
+from app.database.repositories.resume_repository import ResumeRepository
 
 router = APIRouter()
 
-from app.models.user import User
-from app.services.auth_service import get_current_active_user
 
 
 @router.post(
@@ -30,7 +30,6 @@ from app.services.auth_service import get_current_active_user
 async def upload_resume(
     file: UploadFile = File(..., description="Resume file — PDF, DOCX, or TXT"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ):
     """
     Upload and parse a resume file.
@@ -48,7 +47,7 @@ async def upload_resume(
 
     service = ResumeService(db)
     try:
-        result = await service.upload_resume(file, user_id=current_user.id)
+        result = await service.upload_resume(file)
         return result
     except ValueError as e:
         raise HTTPException(
@@ -61,3 +60,12 @@ async def upload_resume(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process resume. Please try again.",
         )
+
+@router.get(
+    "/upload/resumes",
+    response_model=List[ResumeResponse],
+    summary="Get all uploaded resumes",
+)
+async def get_all_resumes(db: AsyncSession = Depends(get_db)):
+    repo = ResumeRepository(db)
+    return await repo.get_all(limit=50)

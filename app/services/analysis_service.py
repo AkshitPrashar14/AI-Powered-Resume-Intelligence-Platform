@@ -30,7 +30,6 @@ class AnalysisService:
         self,
         resume_id: uuid.UUID,
         job_description: str,
-        user_id: uuid.UUID,
         job_title: str = "",
         company: str = "",
     ) -> FullAnalysisResult:
@@ -40,7 +39,6 @@ class AnalysisService:
         Args:
             resume_id: UUID of the previously uploaded resume.
             job_description: Raw job description text.
-            user_id: Authenticated user UUID.
             job_title: Optional job title for context.
             company: Optional company name.
 
@@ -50,7 +48,6 @@ class AnalysisService:
         return await self._orchestrator.run_full_analysis(
             resume_id=resume_id,
             job_description_text=job_description,
-            user_id=user_id,
             job_title=job_title or "",
             company=company or "",
         )

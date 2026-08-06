@@ -33,9 +33,6 @@ psycopg2-binary==2.9.9
 # --- Cache ---
 redis==5.0.4
 
-# --- Frontend ---
-streamlit==1.35.0
-plotly==5.22.0
 
 # --- Utilities ---
 python-dotenv==1.0.1

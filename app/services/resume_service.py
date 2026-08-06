@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database.repositories.resume_repository import ResumeRepository
-from app.database.repositories.user_repository import UserRepository
+
 from app.models.resume import Resume
 from app.schemas.schemas import ParsedResumeData, UploadResumeResponse
 from app.utils.file_parser import FileParser
@@ -39,14 +39,13 @@ class ResumeService:
         self._parser = FileParser()
 
     async def upload_resume(
-        self, file: UploadFile, user_id: uuid.UUID
+        self, file: UploadFile
     ) -> UploadResumeResponse:
         """
         Validate, save, parse, and persist an uploaded resume file.
 
         Args:
             file: FastAPI UploadFile from multipart form.
-            user_id: UUID of the authenticated user.
 
         Returns:
             UploadResumeResponse with resume_id and parsed data.
@@ -90,7 +89,6 @@ class ResumeService:
         # ── 5. Persist to DB ──────────────────────────────────
         resume = await self._resume_repo.create(
             id=resume_id,
-            user_id=user_id,
             original_filename=filename,
             stored_path=stored_path,
             file_type=ext,
@@ -108,7 +106,7 @@ class ResumeService:
             parsed_data=parsed,
         )
 
-    async def get_resume_text(self, resume_id: uuid.UUID, user_id: uuid.UUID) -> str:
+    async def get_resume_text(self, resume_id: uuid.UUID) -> str:
         """
         Retrieve parsed text for a resume by ID.
 
@@ -116,6 +114,6 @@ class ResumeService:
             ValueError: If resume not found or does not belong to user.
         """
         resume = await self._resume_repo.get_active(resume_id)
-        if not resume or resume.user_id != user_id:
+        if not resume:
             raise ValueError(f"Resume {resume_id} not found")
         return resume.parsed_text or ""
