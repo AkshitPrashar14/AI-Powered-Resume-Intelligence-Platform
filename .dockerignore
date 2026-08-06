@@ -9,7 +9,7 @@ env/
 .venv/
 logs/
 uploads/
-cache/
+/cache/
 .git/
 .github/
 .pytest_cache/
