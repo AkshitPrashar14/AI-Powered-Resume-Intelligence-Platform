@@ -12,7 +12,8 @@ dist/
 venv/
 env/
 uploads/
-cache/
+cache/embeddings/
+cache/faiss/
 logs/
 *.log
 .DS_Store
