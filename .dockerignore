@@ -9,8 +9,8 @@ env/
 .venv/
 logs/
 uploads/
-cache/
-!app/ai/cache/
+cache/embeddings/
+cache/faiss/
 .git/
 .github/
 .pytest_cache/
