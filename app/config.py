@@ -89,9 +89,12 @@ class Settings(BaseSettings):
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
     def parse_db_url(cls, v):
-        """Fix asyncpg sslmode issue by replacing with ssl."""
-        if isinstance(v, str) and "sslmode=" in v:
-            return v.replace("sslmode=", "ssl=")
+        """Fix asyncpg connection issues with Neon DB query parameters."""
+        if isinstance(v, str) and "?" in v:
+            base_url, query = v.split("?", 1)
+            if "ssl" in query.lower():
+                return f"{base_url}?ssl=require"
+            return base_url
         return v
 
     @field_validator("ALLOWED_ORIGINS", mode="before")
