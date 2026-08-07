@@ -28,9 +28,6 @@ COPY . .
 # Create required directories
 RUN mkdir -p uploads cache/embeddings cache/faiss logs
 
-# Pre-download the SentenceTransformer model during build
-# This avoids a cold start on first request
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')" || true
 
 # Expose port
 EXPOSE 8000

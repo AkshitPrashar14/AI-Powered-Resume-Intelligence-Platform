@@ -45,9 +45,9 @@ class EmbeddingEngine:
         t0 = time.perf_counter()
         
         genai.configure(api_key=settings.GEMINI_API_KEY)
-        self._model_name = "models/text-embedding-004"
+        self._model_name = "models/gemini-embedding-001"
         self._cache = HybridEmbeddingCache()
-        self._dim = 768  # Gemini text-embedding-004 dimension
+        self._dim = 3072  # Gemini embedding dimension
         
         elapsed = (time.perf_counter() - t0) * 1000
         logger.info(
