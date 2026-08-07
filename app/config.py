@@ -86,6 +86,14 @@ class Settings(BaseSettings):
     # ── CORS ─────────────────────────────────────────────────
     ALLOWED_ORIGINS: List[str] = ["http://localhost:8501", "http://localhost:3000"]
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def parse_db_url(cls, v):
+        """Fix asyncpg sslmode issue by replacing with ssl."""
+        if isinstance(v, str) and "sslmode=" in v:
+            return v.replace("sslmode=", "ssl=")
+        return v
+
     @field_validator("ALLOWED_ORIGINS", mode="before")
     @classmethod
     def parse_origins(cls, v):
