@@ -106,29 +106,38 @@ export default function Analyze() {
 
       <div className="card mb-4">
         <h3>AI Insights</h3>
-        <div className="grid-2">
-          <div>
-            <h4 style={{ color: '#10B981' }}>Strengths</h4>
-            <ul style={{ paddingLeft: '1.5rem' }}>
-              {result.strengths?.map((s, i) => <li key={i} className="mb-1">{s}</li>)}
-            </ul>
+        {(!result.strengths?.length && !result.weaknesses?.length) ? (
+          <p className="text-muted">AI insights are currently unavailable. This is usually caused by the Gemini API rate limit being exceeded (15 requests/minute). Please try again in a minute.</p>
+        ) : (
+          <div className="grid-2">
+            <div>
+              <h4 style={{ color: '#10B981' }}>Strengths</h4>
+              <ul style={{ paddingLeft: '1.5rem' }}>
+                {result.strengths?.map((s, i) => <li key={i} className="mb-1">{s}</li>)}
+              </ul>
+            </div>
+            <div>
+              <h4 style={{ color: '#F59E0B' }}>Weaknesses</h4>
+              <ul style={{ paddingLeft: '1.5rem' }}>
+                {result.weaknesses?.map((w, i) => <li key={i} className="mb-1">{w}</li>)}
+              </ul>
+            </div>
           </div>
-          <div>
-            <h4 style={{ color: '#F59E0B' }}>Weaknesses</h4>
-            <ul style={{ paddingLeft: '1.5rem' }}>
-              {result.weaknesses?.map((w, i) => <li key={i} className="mb-1">{w}</li>)}
-            </ul>
-          </div>
-        </div>
+        )}
       </div>
       
       <div className="card">
         <h3>Missing Skills (High Priority)</h3>
         <div>
-          {result.skill_gap?.high_priority_missing?.map((s, i) => (
-            <span key={i} className="tag tag-missing">{s}</span>
-          ))}
-          {result.skill_gap?.high_priority_missing?.length === 0 && <p>None! Great job.</p>}
+          {(!result.skill_gap?.job_skills?.length) ? (
+            <p className="text-muted">Skill gap analysis is currently unavailable (Rate limit exceeded).</p>
+          ) : result.skill_gap?.high_priority_missing?.length > 0 ? (
+            result.skill_gap.high_priority_missing.map((s, i) => (
+              <span key={i} className="tag tag-missing">{s}</span>
+            ))
+          ) : (
+            <p>None! Great job.</p>
+          )}
         </div>
       </div>
     </div>
