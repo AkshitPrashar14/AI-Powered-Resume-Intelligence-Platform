@@ -1,7 +1,7 @@
 """
 Embedding Engine
 ================
-Singleton wrapper around SentenceTransformer for generating
+Singleton wrapper around Gemini Embeddings API for generating
 dense vector embeddings. Integrates with HybridEmbeddingCache to avoid
 redundant inference on repeated texts.
 
@@ -18,7 +18,7 @@ from typing import List, Optional
 
 import numpy as np
 from loguru import logger
-from sentence_transformers import SentenceTransformer
+import google.generativeai as genai
 
 from app.ai.cache.embedding_cache import HybridEmbeddingCache
 from app.config import settings
@@ -26,10 +26,10 @@ from app.config import settings
 
 class EmbeddingEngine:
     """
-    Thread-safe singleton for sentence embedding inference.
+    Thread-safe singleton for sentence embedding inference via Gemini API.
 
-    Uses SentenceTransformer (all-MiniLM-L6-v2 by default) and wraps
-    it with a HybridEmbeddingCache so repeated texts don't cause re-inference.
+    Uses Gemini text-embedding-004 and wraps
+    it with a HybridEmbeddingCache so repeated texts don't cause API calls.
 
     Usage:
         engine = EmbeddingEngine.get_instance()
@@ -41,15 +41,18 @@ class EmbeddingEngine:
     _lock: threading.Lock = threading.Lock()
 
     def __init__(self) -> None:
-        logger.info(f"[EMBED] Loading SentenceTransformer: {settings.EMBEDDING_MODEL}")
+        logger.info("[EMBED] Initializing Gemini Embeddings API (text-embedding-004)")
         t0 = time.perf_counter()
-        self._model = SentenceTransformer(settings.EMBEDDING_MODEL)
+        
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+        self._model_name = "models/text-embedding-004"
         self._cache = HybridEmbeddingCache()
-        self._dim = self._model.get_sentence_embedding_dimension()
+        self._dim = 768  # Gemini text-embedding-004 dimension
+        
         elapsed = (time.perf_counter() - t0) * 1000
         logger.info(
             f"[EMBED] ✅ Model ready — dim={self._dim}, "
-            f"load_time={elapsed:.0f}ms, model={settings.EMBEDDING_MODEL}"
+            f"load_time={elapsed:.0f}ms, model={self._model_name}"
         )
 
     @classmethod
@@ -69,11 +72,18 @@ class EmbeddingEngine:
         """Return embedding vector dimension."""
         return self._dim
 
+    def _normalize(self, vec: np.ndarray) -> np.ndarray:
+        """L2-normalize a vector."""
+        norm = np.linalg.norm(vec)
+        if norm == 0:
+            return vec
+        return vec / norm
+
     def embed(self, text: str) -> np.ndarray:
         """
         Embed a single text string.
 
-        Checks hybrid cache first (Redis → Disk); runs inference only on a
+        Checks hybrid cache first (Redis → Disk); calls Gemini API only on a
         cache miss.
 
         Args:
@@ -91,12 +101,14 @@ class EmbeddingEngine:
 
         # Inference
         t0 = time.perf_counter()
-        embedding: np.ndarray = self._model.encode(
-            text,
-            convert_to_numpy=True,
-            normalize_embeddings=True,
-            show_progress_bar=False,
+        result = genai.embed_content(
+            model=self._model_name,
+            content=text,
+            task_type="retrieval_document"
         )
+        embedding = np.array(result['embedding'], dtype=np.float32)
+        embedding = self._normalize(embedding)
+        
         elapsed = (time.perf_counter() - t0) * 1000
         logger.debug(f"[EMBED] Inference {elapsed:.1f}ms — {len(text)} chars")
 
@@ -108,7 +120,7 @@ class EmbeddingEngine:
         Embed multiple texts efficiently.
 
         Cache-hits are returned immediately; remaining texts are batched
-        into a single SentenceTransformer inference call.
+        into a single Gemini API inference call.
 
         Args:
             texts: List of input strings.
@@ -130,20 +142,22 @@ class EmbeddingEngine:
 
         if uncached_texts:
             t0 = time.perf_counter()
-            batch_embeddings = self._model.encode(
-                uncached_texts,
-                convert_to_numpy=True,
-                normalize_embeddings=True,
-                show_progress_bar=False,
-                batch_size=32,
+            # Batch inference
+            batch_result = genai.embed_content(
+                model=self._model_name,
+                content=uncached_texts,
+                task_type="retrieval_document"
             )
             elapsed = (time.perf_counter() - t0) * 1000
             logger.debug(
                 f"[EMBED] Batch inference — {len(uncached_texts)} texts "
                 f"in {elapsed:.1f}ms"
             )
+            
+            embeddings_list = batch_result['embedding']
             for idx, (orig_idx, text) in enumerate(zip(uncached_indices, uncached_texts)):
-                emb = batch_embeddings[idx]
+                emb = np.array(embeddings_list[idx], dtype=np.float32)
+                emb = self._normalize(emb)
                 self._cache.set_embedding(text, emb)
                 results[orig_idx] = emb
 
@@ -166,7 +180,7 @@ class EmbeddingEngine:
 
         vec_a = self.embed(text_a)
         vec_b = self.embed(text_b)
-        # Both vectors are L2-normalized by encode(), so dot product = cosine sim
+        # Both vectors are L2-normalized, so dot product = cosine sim
         score = float(np.dot(vec_a, vec_b))
         score = max(0.0, min(1.0, score))
 

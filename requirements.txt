@@ -14,9 +14,6 @@ pydantic-settings==2.2.1
 
 # --- AI & ML ---
 google-generativeai==0.7.2
-sentence-transformers==3.0.1
-transformers==4.41.2
-torch==2.3.0
 faiss-cpu==1.8.0
 
 # --- Document Parsing ---
